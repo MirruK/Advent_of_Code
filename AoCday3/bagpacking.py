@@ -21,7 +21,6 @@ def findtotalpriority(bags):
     for bag in bags:
         for i in range(len(bag[0])):
             if bag[0][i] in bag[1]:
-                print(f"Matched character: {bag[0][i]}")
                 prioritysum += aspriority(bag[0][i])
                 break
     return prioritysum
