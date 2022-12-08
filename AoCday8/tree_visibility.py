@@ -1,39 +1,63 @@
-
-def isvisible(pos,grid) -> bool:
-    flat_list = [item for sublist in grid for item in sublist]
-    tree_height = grid[pos[0]][pos[1]]
-    tree_x = pos[0]
-    tree_y = pos[1]
-    left, right, up, down = False, False, False, False
-    fromleft = grid[tree_y][0:tree_x+1]
-    fromright = grid[tree_y][-1:tree_x:-1]
-    print(tree_x, tree_y)
-    fromup = flat_list[tree_x:tree_x+len(grid[0])*tree_y+1:len(grid[0])]
-    fromdown = flat_list[-(len(grid[0])-tree_x):tree_x+len(grid[0])*tree_y:-len(grid[0])]
-    if max(fromleft)< tree_height-1:
-        left = True
-    if max(fromright) < tree_height-1:
-        right = True
-    if max(fromup) < tree_height-1:
-        up = True
-    if max(fromdown) < tree_height-1:
-        down = True
-    if any([right,left,up,down]) == True:
-        return True
-    else: return False
-
 def formatdata():
     ls = []
     with open('./input.txt','r') as file:
         for line in file.readlines():
             ls.append([int(character) for character in line if character != "\n"])
     return ls
-grid = formatdata()
-total = 0
-for row,rowval in enumerate(grid):
-    for col, colval in enumerate(rowval):
-        if row == 0 or row == len(grid) or col == 0 or col == len(rowval):
-            total +=1
-        elif isvisible((row,col),grid):
-            total += 1
-print(total)
+
+def check_left(pos,matrix):
+    x = pos[0]
+    y = pos[1]
+    height = matrix[x][y]
+    fromleft = matrix[x][0:y]
+    if fromleft == []:
+        return False
+    return max(fromleft) < height 
+
+def check_right(pos,matrix):
+    x = pos[0] #row
+    y = pos[1] #col
+    rowlength = len(matrix[0])
+    height = matrix[x][y]
+    fromright = matrix[x][::-1][0:rowlength-y-1]
+    return max(fromright) < height 
+
+def check_up(pos, matrix):
+    x = pos[0]
+    y = pos[1]
+    rowlength = len(matrix[0])
+    height = matrix[x][y]
+    currcol = []
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            if j == y:
+                currcol.append(matrix[i][j])
+    fromup = currcol[0:x]
+    return max(fromup) < height
+
+def check_bottom(pos,matrix):
+    x = pos[0]
+    y = pos[1]
+    rowlength = len(matrix[0])
+    height = matrix[x][y]
+    currcol = []
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            if j == y:
+                currcol.append(matrix[i][j])
+    frombottom = currcol[::-1][0:rowlength-x-1]
+    return max(frombottom) < height
+
+def tree_checker():
+    matrix = formatdata()
+    count = 0
+    print(len(matrix), len(matrix[0]))
+    for row in range(0,len(matrix)):
+        for col in range(0,len(matrix[0])):
+            if row == 0 or col == 0 or row == len(matrix)-1 or col == len(matrix[0])-1:
+                count += 1
+            else:
+                count += any([check_left((row,col),matrix),check_right((row,col),matrix),check_up((row,col),matrix),check_bottom((row,col),matrix)])
+    return count
+
+print(tree_checker())
