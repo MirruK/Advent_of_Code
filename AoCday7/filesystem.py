@@ -1,89 +1,93 @@
-import re
-
-class ElfFileSystem():
-
-    def __init__(self, instructions):
-        self.instructions = instructions
-        self.parent_directory = None
-        self.root = ElfDirectory('', None)
-        self.filesystem = [self.root]
-        self.current_directory = self.root
-        
-    def new_directory(self,name):
-        self.filesystem.append(ElfDirectory(name,self.current_directory))
-    
-    def new_file(self,name,size):
-        self.current_directory.content.append(ElfFile(name,size,self.pwd()))
-
-    def cd(self, arg):
-        if arg == '..':
-            self.current_directory = self.parent_directory
-            self.parent_directory = self.current_directory.parent_dir
-        else:
-            self.current_directory = arg
-
-    def pwd(self):
-        origin = self.current_directory
-        full_path = '/'
-        while(self.parent_directory != None):
-            full_path = '/'.join([self.parent_directory.name, full_path])
-            self.cd('..')
-        self.current_directory = origin
-        self.parent_directory = origin.parent_dir
-        return full_path 
-    
-    def construct_fs(self, instructions):
-        for inst in instructions:
-            if inst[0] == '$':
-                self.runcommand(inst.split()[1], inst.split()[2])
-
-
-class ElfDirectory():
-
-    def __init__(self, name, parent) -> None:
-        self.parent_dir = parent
-        self.name = name
-        self.content = [] 
-
-
-class ElfFile():
-
-    def __init__(self,name, size, path_to_file) -> None:
-        self.name = name
-        self.size = size
-        self.path_to_file = path_to_file
-
-
 def formatdata():
     with open("./input.txt", "r") as file:
         return list(map(lambda x: x.removesuffix("\n"),file.readlines()))
 
+def isparent(parentpath,childpath):
+    return True if parentpath in childpath else False
+
+def getparent(path : str):
+    return "/".join(path.split("/")[:-1])
+
+
+def isadjacent(path1, path2):
+    if path1 == path2:
+        return False
+    return True if getparent(path1) == getparent(path2) else False
+
+def find_directorystack(path,pathtuples):
+    #return [x for i,x in enumerate(pathtuples) if x==isparent(x[0],path)]
+    return list(filter(lambda x: isparent(x[0],path),pathtuples)) + list(filter(lambda x: isadjacent(x[0],path),pathtuples))
+
+def string_diff(str1: str,str2: str):
+    if len(str1) > len(str2):
+        return str1.replace(str2, '')
+    else: return str2.replace(str1, '') 
+
+#def find_size(dir):
+    #if size(dir):
+        #pass
+
+def find_occurrences(path,pathtuples):
+    return [i for i, x in enumerate(pathtuples) if x[0] == path]
+
+def sum_duplicates(currentpath,pathtuples):
+    path = currentpath[0]
+    #original = list with the duplicates
+    #pathtuples = the one we want to check
+    indeces = find_occurrences(path,pathtuples)
+    if len(indeces) > 1:
+        print("found thief")
+        newelem = (path, pathtuples[indeces[0]][1] + pathtuples[indeces[1]][1])
+        return newelem
+    else: return currentpath
+
+ 
+
 instructions = formatdata()
 
 pathtuples = [] 
-
-
-currpath = ''
+original = []
+currpath = ""
 currsum = 0
 for inst in instructions:
-    if inst == "$ ls":
-        pass
-    else:
-        if inst == '$ cd ..':
-            currpath = currpath.split("/")
-            print(currpath)
-            currpath.pop()
-            print(currpath)
-            currpath = "/".join(currpath)
-        elif inst.split()[1] == 'cd':
-            pathtuples.append((currpath,currsum))
+    parts = inst.split()
+    if parts[0] == "$":
+        if currsum > 0:
+            original.append((currpath, currsum))
+            if currsum <= 100000:
+                pathtuples.append((currpath,currsum))
             currsum = 0
-            currpath = '/'.join([inst[5:], currpath])
-        elif inst.split()[0] != "dir":
-            currsum += int(inst.split()[0])
+        if parts[1] == "ls":
+            pass
+        elif parts[1] == "cd" and parts[2] != "..":
+            if parts[2] == "/":
+                currpath = "/"
+            elif currpath == "/":
+                currpath += parts[2]
+            else: currpath = "/".join((currpath, parts[2]))
+        elif parts[1] == "cd" and parts[2] == "..":
+            if len(currpath.split("/")) == 2:
+                currpath = "/"
+            else : currpath = "/".join(currpath.split("/")[:-1])
+    elif parts[0] != "dir":
+        currsum += int(parts[0])
 
-print(pathtuples)
 
-fs = ElfFileSystem([])
-fs.new_file("MyFile","1024")
-fs.new_directory("dir1")
+# for ind in range(len(pathtuples)):
+#     print(pathtuples[ind])
+#     pathtuples[ind] = sum_duplicates(pathtuples[ind],original)
+# total = sum(map(lambda x: x[1],pathtuples))
+
+
+# print(total)
+# for ind in range(len(pathtuples)):
+#     thissum = 0
+#     ls = find_directorystack(pathtuples[ind][0],pathtuples)
+#     print("Current stack:", ls)
+#     if len(ls) > 1:
+#         thissum = sum(map(lambda x: x[1],ls))
+#         print("Sum of stack:", thissum)
+#     if thissum <= 100000:
+#         total += thissum 
+
+print(total)
