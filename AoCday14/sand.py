@@ -1,4 +1,6 @@
 from functools import reduce
+from collections import defaultdict
+from re import findall
 
 
 class Grain():
@@ -23,26 +25,21 @@ class Grain():
     def get_adj(self):
         row = self.pos[0]
         col = self.pos[1]
-        return [1 if self.state[row+1][col] != 0 else 0, 
+        return (1 if self.state[row+1][col] != 0 else 0, 
                 1 if self.state[row+1][col-1] != 0 else 0,
-                1 if self.state[row+1][col+1] != 0 else 0]
+                1 if self.state[row+1][col+1] != 0 else 0)
 
-    def upd_rec(self,pos):
+    def update(self):
+        pos = self.pos
         adj = self.get_adj()
-        if pos == (False, False):
-            return pos
-        if pos[0]>self.lim:
-            return (False, False)
-        if all(adj) == "#":
-            return pos
-        else:
-            if reduce(lambda x,y: (x[0] and x[1]) and (y[0] and y[1]), enumerate(zip(adj,[1,1,0])):
-                return upd_rec((pos[0],pos[1]+1))
-            elif reduce(lambda x,y: (x[0] and x[1]) and (y[0] and y[1]), enumerate(zip(adj,[0,0,0])):
- 
+        relation = defaultdict(lambda: [pos[0]+1,pos[1]])
+        relation.update({(1,1,0) : (pos[0]+1,pos[1]+1),
+                         (0,1,1) : (pos[0]+1,pos[1]-1),
+                         (0,1,0) : (pos[0]+1,pos[1]-1)})
 
-
-            
+        while(adj != (1,1,1) and self.pos[0] < self.lim):
+            self.pos = relation[adj]
+            adj = self.get_adj()
 
 
 #    def update(self):
@@ -58,8 +55,11 @@ state = []
 
 
 def initialize(data):
-    pass
-
+    state = [[0] * 1000 for n in range(10)]
+    for val in data:
+        coords = findall("[0-9+,0-9]+ [0-9+,0-9]+", val)
+        coords[0] = eval("(" + coords[0] + ")")
+        coords[1] = eval("(" + coords[1] + ")")
 
 def exec_frame(state):
     pass
