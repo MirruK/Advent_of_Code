@@ -1,4 +1,4 @@
-use std::default;
+use std::any;
 
 #[derive(Debug)]
 struct Credentials {
@@ -27,15 +27,27 @@ impl Default for Credentials {
     }
 }
 
+impl Credentials {
+    fn validate(&self) -> bool {
+        let values: [Option<String>; 7] = [
+            self.byr.clone(),
+            self.iyr.clone(),
+            self.eyr.clone(),
+            self.hgt.clone(),
+            self.hcl.clone(),
+            self.ecl.clone(),
+            self.pid.clone(),
+        ];
+        return values.iter().all(|f| *f != None);
+    }
+}
+
 fn deserialize_to(serialized: &str) -> Option<Credentials> {
-    //-> Credentials {
     let mut creds: Vec<(&str, &str)> = vec![];
     for fields in serialized.split(" ") {
-        //println!("{:?}", fields.split(":").collect::<Vec<&str>>());
-        let mut temp = fields.split(":").collect::<Vec<&str>>();
+        let temp = fields.split(":").collect::<Vec<&str>>();
         creds.push((temp.get(0).unwrap(), temp.get(1).unwrap()));
     }
-    println!("{:?}", creds);
     let mut deserialzed = Credentials::default();
     for cred in creds {
         match cred.0 {
@@ -53,19 +65,31 @@ fn deserialize_to(serialized: &str) -> Option<Credentials> {
     return Some(deserialzed);
 }
 
-fn split_data() -> Vec<&str> {
+fn split_data() -> Vec<String> {
     let input = include_str!("./input.txt");
-    let curr_line = Some(" ");
-    let inp_iter = input.lines();
-    let serialized_credentials = Vec::<&str>::default();
-    // Check when line is "", when None return Vec of &str
-    while curr_line != Some("") {
+    let mut inp_iter = input.split("\n\n");
+    let mut curr_line = inp_iter.next();
+    let mut serialized_credentials = Vec::<String>::new();
+
+    while curr_line != None {
+        serialized_credentials.push(curr_line.unwrap().replace("\n", " "));
         curr_line = inp_iter.next();
-        if curr_line == None {}
-        //deserialize_to()
     }
+
+    serialized_credentials
 }
 
 fn main() {
-    println!("{:?}", deserialize_to("byr:123 aaa:bbbb hcl:1122baa"));
+    let data = split_data()
+        .iter()
+        .map(|s| deserialize_to(s))
+        .collect::<Vec<Option<Credentials>>>();
+    let valid_passports = data.iter().fold(0, |acc, curr| {
+        if curr.as_ref().unwrap().validate() {
+            acc + 1
+        } else {
+            acc
+        }
+    });
+    println!("{:?}", valid_passports);
 }
