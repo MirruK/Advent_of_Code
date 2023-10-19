@@ -26,7 +26,8 @@ fn main() {
     let steps: [(usize, usize); 5] = [(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)];
     let values = steps
         .iter()
-        .map(|s| traverse_slope(*s).unwrap())
-        .fold(i64::from(1), |acc, f| i64::from(f) * acc);
+        .map(|s| i64::from(traverse_slope(*s).unwrap()))
+        .product::<i64>();
+    //.fold(i64::from(1), |acc, f| i64::from(f) * acc);
     println!("{}", values);
 }
