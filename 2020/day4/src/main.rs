@@ -1,5 +1,3 @@
-use std::any;
-
 #[derive(Debug)]
 struct Credentials {
     byr: Option<String>, // (Birth Year)
@@ -27,6 +25,81 @@ impl Default for Credentials {
     }
 }
 
+fn is_within_bounds(s: Option<&String>, lower: i32, upper: i32) -> bool {
+    if s.as_deref() == None {
+        return false;
+    }
+    return s.unwrap().parse::<i32>().unwrap_or_default() >= lower
+        && s.unwrap().parse::<i32>().unwrap_or(1000000) <= upper;
+}
+
+fn is_height(s: Option<&String>) -> bool {
+    if s.as_deref() == None {
+        return false;
+    }
+    if s.unwrap().ends_with("cm") {
+        return is_within_bounds(
+            Some(
+                &s.unwrap()
+                    .strip_suffix("cm")
+                    .map(|st| st.to_string())
+                    .unwrap(),
+            ),
+            150,
+            193,
+        );
+    }
+    if s.unwrap().ends_with("in") {
+        return is_within_bounds(
+            Some(
+                &s.unwrap()
+                    .strip_suffix("in")
+                    .map(|st| st.to_string())
+                    .unwrap(),
+            ),
+            59,
+            76,
+        );
+    }
+    false
+}
+
+fn is_hair_color(s: Option<&String>) -> bool {
+    if s.as_deref() == None {
+        return false;
+    }
+    if !s.unwrap().starts_with("#") {
+        return false;
+    }
+    if s.unwrap().len() < 7 || s.unwrap().len() > 7 {
+        return false;
+    }
+    let mut chars = s.unwrap().chars();
+    let _ = chars.next();
+    for _ in 0..6 {
+        if !chars.next().unwrap().is_ascii_hexdigit() {
+            return false;
+        }
+    }
+    true
+}
+
+fn is_eye_color(s: Option<&String>) -> bool {
+    if s.as_deref() == None {
+        return false;
+    }
+    match s.clone().unwrap().as_str() {
+        "amb" => true,
+        "blu" => true,
+        "brn" => true,
+        "gry" => true,
+        "grn" => true,
+        "hzl" => true,
+        "oth" => true,
+        _ => false,
+    }
+}
+
 impl Credentials {
     fn validate(&self) -> bool {
         let values: [Option<String>; 7] = [
@@ -39,6 +112,23 @@ impl Credentials {
             self.pid.clone(),
         ];
         return values.iter().all(|f| *f != None);
+    }
+
+    fn validate_strict(&self) -> bool {
+        let values: [bool; 7] = [
+            is_within_bounds(self.byr.as_ref(), 1920, 2002),
+            is_within_bounds(self.iyr.as_ref(), 2010, 2020),
+            is_within_bounds(self.eyr.as_ref(), 2020, 2030),
+            is_height(self.hgt.as_ref()),
+            is_hair_color(self.hcl.as_ref()),
+            is_eye_color(self.ecl.as_ref()),
+            self.pid.as_ref().unwrap_or(&String::new()).len() == 9
+                && match self.pid.as_ref().unwrap().parse::<i32>() {
+                    Err(_) => false,
+                    _ => true,
+                },
+        ];
+        return values.iter().all(|f| *f);
     }
 }
 
@@ -91,5 +181,13 @@ fn main() {
             acc
         }
     });
+    let valid_passports2 = data.iter().fold(0, |acc, curr| {
+        if curr.as_ref().unwrap().validate_strict() {
+            acc + 1
+        } else {
+            acc
+        }
+    });
     println!("{:?}", valid_passports);
+    println!("{:?}", valid_passports2);
 }
