@@ -85,7 +85,7 @@ fn is_hair_color(s: Option<&String>) -> bool {
 }
 
 fn is_eye_color(s: Option<&String>) -> bool {
-    if s.as_deref() == None {
+    if s.is_none() {
         return false;
     }
     match s.clone().unwrap().as_str() {
