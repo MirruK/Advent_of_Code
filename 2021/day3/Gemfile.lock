@@ -1,0 +1,13 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    example (1.0.2)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  example (~> 1.0, >= 1.0.2)
+
+BUNDLED WITH
+   2.4.22
