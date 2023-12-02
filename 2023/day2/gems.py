@@ -5,26 +5,20 @@ from operator import mul
 
 
 class Orbs():
-    def __init__(self, r = 0, g = 0, b = 0) -> None:
-        self.r = (r) if r != 0 else ()
-        self.r_tot = r
-        self.g = (g) if g != 0 else ()
-        self.g_tot = g
-        self.b = (b) if b != 0 else ()
-        self.b_tot = b
-        self.id = 0
+    def __init__(self) -> None:
+        self.r = self.g = self.b = self.id = 0
 
     def add_red(self, num):
-        self.r = (*self.r, num)
-        self.r_tot += num
+        if not isinstance(self.r, tuple): self.r = (self.r, num)
+        else: self.r = (*self.r, num)
 
     def add_green(self, num):
-        self.g = (*self.g, num)
-        self.g_tot += num
+        if not isinstance(self.g, tuple): self.g = (self.g, num)
+        else: self.g = (*self.g, num)
 
     def add_blue(self, num):
-        self.b = (*self.b, num)
-        self.b_tot += num
+        if not isinstance(self.b, tuple): self.b = (self.b, num)
+        else: self.b = (*self.b, num)
 
     def dispatcher(self, color, num):
         match color:
@@ -39,9 +33,6 @@ class Orbs():
         validate_tuple = lambda tup: tup[0] <= 12 and tup[1] <= 13 and tup[2] <= 14
         return all(map(validate_tuple, zip_longest(self.r, self.g, self.b, fillvalue=0)))
     
-    def __str__(self) -> str:
-        return f"Orbs:  [r: {self.r}, g: {self.g}, b: {self.b}]"
-    
     def power_set(self):
         return reduce(mul, (map(lambda x: max(x) ,[self.r, self.g, self.b])), 1)
 
@@ -50,23 +41,20 @@ class Orbs():
 def main():
     games = []
     for line in sys.stdin.readlines():
-        line = line.rstrip()
         game = Orbs()
         splitted = line.split(" ") # => ["Game", "1:", "3", "blue,", "4", "red;", "1", "red"...]
-        game_id = int(splitted[1].strip(":"))
-        game.id = game_id
+        game.id = int(splitted[1].strip(":"))
         for i in range(2, len(splitted)-1):
+            # Works off the assumption that a digit is always followed by its color name
             if splitted[i].isdigit():
-                game.dispatcher(splitted[i+1].strip(",;"), int(splitted[i])) 
+                game.dispatcher(splitted[i+1].strip(",;\n"), int(splitted[i])) 
         games.append(game)
-    id_tot = 0
-    powers = []
-    for g in games:
-        powers.append(g.power_set())
-        if g.validate():
-            id_tot += g.id
+    # Filter out games that were impossible by the rules and then sum the valid games ids
+    id_tot = sum(map(lambda x: x.id, filter(lambda x: x.validate(),games)))
+    # Take the power set of each game and sum the values
+    powers_sum = sum(map(lambda x: x.power_set(), games))
     print("Part 1 answer -> Total id: ", id_tot)
-    print(f"Part 2 answer -> Power sets sum: {sum(powers)}")
+    print(f"Part 2 answer -> Power sets sum: {powers_sum}")
 
 
 if __name__ == "__main__":
