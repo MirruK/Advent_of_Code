@@ -11,6 +11,16 @@ struct galaxy_map {
   size_t height;
 };
 
+typedef struct sized_arr {
+  int *arr;
+  size_t len;
+} sized_arr;
+
+typedef struct vec2 {
+  int row;
+  int col;
+} vec2;
+
 /* Strips last newline from string and updates line_size to reflect the change.
   line_size is a pointer to the number of characters in the string (excluding
   null-byte)
@@ -56,11 +66,17 @@ size_t str_search_all(char needle, char *haystack, size_t n, size_t start,
   return matches_len;
 }
 
-/* Expands universe according to the rules of Advent of Code
-   mutating the galaxy map in the process */
-struct galaxy_map expand_universe(struct galaxy_map map) {
-  int *cols_to_expand = calloc(map.width, sizeof(int));
-  int *rows_to_expand = calloc(map.height, sizeof(int));
+vec2 flat_to_2d_coord(int coord, size_t width) {
+  int row = (coord / (int)width);
+  int col = (coord % (int)width);
+  vec2 ret = {.row = row, .col = col};
+  return ret;
+}
+
+void find_expanded_regions(struct galaxy_map map, sized_arr *exp_rows,
+                           sized_arr *exp_cols) {
+  int *expanded_row_pos = calloc(map.height, sizeof(int));
+  int *expanded_col_pos = calloc(map.width, sizeof(int));
   size_t num_rows_to_add = 0;
   size_t num_columns_to_add = 0;
   // 1. Count columns without any galaxies & store the indexes for the columns
@@ -70,8 +86,7 @@ struct galaxy_map expand_universe(struct galaxy_map map) {
     end = (map.width * map.height - (map.width - i)) + 1;
     matched_column = str_search('#', map.flat_map, i, end, map.width);
     if (matched_column == -1) {
-      cols_to_expand[i] = 1;
-      num_columns_to_add++;
+      expanded_col_pos[num_columns_to_add++] = i;
     }
   }
   // 2. The same as above but for rows.
@@ -79,37 +94,13 @@ struct galaxy_map expand_universe(struct galaxy_map map) {
     matched_row = str_search('#', map.flat_map, i * map.width,
                              i * map.width + map.width, 1);
     if (matched_row == -1) {
-      rows_to_expand[i] = 1;
-      num_rows_to_add++;
+      expanded_row_pos[num_rows_to_add++] = i;
     }
   }
-  // 3. Allocate new resized array of empty space and recreate the map
-  size_t new_width = num_columns_to_add + map.width;
-  size_t new_height = num_rows_to_add + map.height;
-  size_t new_map_size = new_width * new_height;
-  assert(new_map_size > 0);
-  char *new_map = malloc(new_map_size);
-  size_t new_map_idx = 0;
-  for (size_t i = 0; i < map.height * map.width;) {
-    if (rows_to_expand[i / map.height] == 1) {
-      for (size_t j = 0; j < new_width * 2; j++) {
-        new_map[new_map_idx++] = map.flat_map[i];
-      }
-      i += map.width;
-    } else if (cols_to_expand[i % map.width] == 1) {
-      new_map[new_map_idx++] = map.flat_map[i];
-      new_map[new_map_idx++] = map.flat_map[i++];
-    } else {
-      new_map[new_map_idx++] = map.flat_map[i++];
-    }
-  }
-  struct galaxy_map new_map_struct = {
-      .flat_map = new_map, .width = new_width, .height = new_height};
-  free(cols_to_expand);
-  free(rows_to_expand);
-  cols_to_expand = NULL;
-  rows_to_expand = NULL;
-  return new_map_struct;
+  exp_cols->arr = expanded_col_pos;
+  exp_cols->len = num_columns_to_add;
+  exp_rows->arr = expanded_row_pos;
+  exp_rows->len = num_rows_to_add;
 }
 
 /* Read an input file into a flat array
@@ -140,34 +131,51 @@ struct galaxy_map parse_input() {
     free(linep);
     linep = NULL;
   }
-  // printf("%s\n", flat_map);
   struct galaxy_map map = {
       .flat_map = flat_map, .width = width, .height = height};
   return map;
 }
 
+int expanded_regions_crossed(sized_arr expanded_rows, sized_arr expanded_cols,
+                             vec2 galaxy1, vec2 galaxy2) {
+  int regions_crossed = 0;
+  for (int i = 0; i < expanded_rows.len; i++) {
+    if ((expanded_rows.arr[i] > galaxy1.row &&
+         expanded_rows.arr[i] < galaxy2.row) ||
+        (expanded_rows.arr[i] < galaxy1.row &&
+         expanded_rows.arr[i] > galaxy2.row)) {
+      regions_crossed++;
+    }
+  }
+  for (int i = 0; i < expanded_cols.len; i++) {
+    if ((expanded_cols.arr[i] > galaxy1.col &&
+         expanded_cols.arr[i] < galaxy2.col) ||
+        (expanded_cols.arr[i] < galaxy1.col &&
+         expanded_cols.arr[i] > galaxy2.col)) {
+      regions_crossed++;
+    }
+  }
+  return regions_crossed;
+}
+
 void compute_galaxy_distances(struct galaxy_map universe,
-                              size_t number_of_galaxies,
-                              int *galaxy_locations) {
-  int count = 0;
-  int sum = 0;
-  for (size_t i = 0; i < number_of_galaxies; i++) {
-    for (size_t j = i + 1; j < number_of_galaxies; j++) {
-      int g_pos1 = galaxy_locations[i];
-      int g_row1 = (g_pos1 / (int)universe.width);
-      int g_col1 = (g_pos1 % (int)universe.width);
-      int g_pos2 = galaxy_locations[j];
-      int g_row2 = (g_pos2 / (int)universe.width);
-      int g_col2 = (g_pos2 % (int)universe.width);
-      int manhattan_distance = abs(g_row1 - g_row2) + abs(g_col1 - g_col2);
-      // printf("Galaxy 1: (%d, %d)\n", g_row1, g_col1);
-      // printf("Galaxy 2: (%d, %d)\n", g_row2, g_col2);
-      // printf("Manhattan distance: %d\n", manhattan_distance);
-      count++;
+                              sized_arr galaxy_locations,
+                              sized_arr expanded_rows, sized_arr expanded_cols,
+                              int expansion_factor) {
+  long sum = 0;
+  for (size_t i = 0; i < galaxy_locations.len; i++) {
+    for (size_t j = i + 1; j < galaxy_locations.len; j++) {
+      vec2 g_pos1 = flat_to_2d_coord(galaxy_locations.arr[i], universe.width);
+      vec2 g_pos2 = flat_to_2d_coord(galaxy_locations.arr[j], universe.width);
+      int exp_regions_crossed = expanded_regions_crossed(
+          expanded_rows, expanded_cols, g_pos1, g_pos2);
+      int manhattan_distance =
+          abs(g_pos1.row - g_pos2.row) + abs(g_pos1.col - g_pos2.col) +
+          exp_regions_crossed * expansion_factor - exp_regions_crossed;
       sum += manhattan_distance;
     }
   }
-  printf("Sum of distances: %d\n", sum);
+  printf("Sum of distances: %ld\n", sum);
 }
 
 void test_str_search() {
@@ -189,18 +197,26 @@ void print_map(struct galaxy_map map) {
 
 int main() {
   struct galaxy_map universe = parse_input();
-  struct galaxy_map expanded_universe = expand_universe(universe);
-  printf("%s\n", expanded_universe.flat_map);
-  printf("Expanded width: %zd\n", expanded_universe.width);
-  printf("Expanded height: %zd\n", expanded_universe.height);
-  int *matches =
-      malloc(sizeof(int) * expanded_universe.height * expanded_universe.width);
+
+  int *matches = malloc(sizeof(int) * universe.height * universe.width);
   size_t matches_len;
-  matches_len = str_search_all(
-      '#', expanded_universe.flat_map,
-      expanded_universe.height * expanded_universe.width, 0, matches);
-  compute_galaxy_distances(expanded_universe, matches_len, matches);
-  free(expanded_universe.flat_map);
+  matches_len = str_search_all('#', universe.flat_map,
+                               universe.height * universe.width, 0, matches);
+  sized_arr matches_sized = {.arr = matches, .len = matches_len};
+
+  sized_arr exp_rows = {.arr = NULL, .len = 0};
+  sized_arr exp_cols = {.arr = NULL, .len = 0};
+  find_expanded_regions(universe, &exp_rows, &exp_cols);
+
+  printf("Part 1:\n");
+  compute_galaxy_distances(universe, matches_sized, exp_rows, exp_cols, 2);
+
+  printf("Part 2:\n");
+  compute_galaxy_distances(universe, matches_sized, exp_rows, exp_cols,
+                           1000000);
+
+  free(exp_rows.arr);
+  free(exp_cols.arr);
   free(universe.flat_map);
   free(matches);
   return 0;
