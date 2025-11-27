@@ -1,0 +1,11 @@
+MAX_VAL = 200
+0.  adapters(A) = [MAX_VAL], Buckets = [3]
+    C = 0
+1.  Start from C = 0, Cprev = 0
+2.  Next possible = min [ A[C+1], A[C+2], A[C+3] ]
+3.  Pick smallest possible
+    (set Cprev = C, C = Next Possible)
+3.5. If C == Final return buckets;
+
+4.  Increment buckets[C - Cprev]
+5.  GOTO 2.
