@@ -8,22 +8,25 @@
 #include <vector>
 
 
-long operate_on_columns(std::vector<std::string>& lines, int start_col, int col_count, char op){
+long long operate_on_columns(std::vector<std::string>& lines, int start_col, int col_count, char op){
   std::string n;
-  long total = op == '+' ? 0 : 1;
-  
+  long long total = op == '+' ? 0 : 1;
+    long long num;  
     // For col_start, col_count columns forward
   for(int col = start_col; col < start_col + col_count; col++){
       // For every row
     for(auto& line : lines){
       // as int
       // long num = line[col]-'0';
+      if (!isspace(line[col]))
       n.push_back(line[col]);
     }
-    long num = std::stol(n);
+
     if (op == '+'){
+      num = n.length() > 0 ? std::stoll(n) : 0;
       total += num;
     } else {
+      num = n.length() > 0 ? std::stoll(n) : 1;
       total *= num;
     }
     n = "";
@@ -59,7 +62,11 @@ int main(){
   int total = 0;
   for (auto c : ops){
     if ((!isspace(c) && curr != 0) || (total == (ops.size() - 1))){
+      if(total == (ops.size() - 1)) {
+	col_sizes.push_back(curr+1);
+      }else{
       col_sizes.push_back(curr);
+      }
       operators.push_back(curr_op);
       curr_op = c;
       curr = 0;
@@ -70,8 +77,9 @@ int main(){
   for(auto cs : col_sizes) {
     std::cout << cs << std::endl;
   }
+  // col_sizes[col_sizes.size()-1]++;
   col = 0;
-  long sum = 0;
+  long long sum = 0;
   for(int i = 0; i < col_sizes.size(); i++){
     sum += operate_on_columns(lines, col, col_sizes[i], operators[i]);
     col+=col_sizes[i];
