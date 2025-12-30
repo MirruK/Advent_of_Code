@@ -1,0 +1,11 @@
+.vscode
+*.o
+*.lock
+*.bin
+*.out
+*~
+*#
+.#*
+target
+input.txt
+test.txt
