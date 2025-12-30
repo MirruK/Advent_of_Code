@@ -5,6 +5,7 @@
 #include <map>
 
 using Pos = std::pair<long, long>;
+using Range = std::pair<long, long>;
 using Rect = std::pair<Pos,Pos>;
 
 
@@ -42,58 +43,67 @@ std::map<Rect, long, RectLess> permute(const std::vector<Pos>& vec){
   return areas;
 }
 
-bool inside_rect(const Pos& p, const Rect& r){
-  long v1x;
-  long v1y; 
-  long v2x; 
-  long v2y; 
-  if(r.first.first < r.second.first) {
-    v1x = r.first.first;
-    v2x = r.second.first;
+std::vector<Rect> connect_lines(const std::vector<Pos>& vec){
+  std::vector<Rect> lines;
+  Pos snd;
+  for(int i = 1; i <= vec.size(); i++){
+    auto fst = vec[i-1];
+    if(i == vec.size()){
+      snd = vec[0];
+    }else {
+      snd = vec[i];
+    }
+    lines.push_back(Rect{fst, snd});
   }
-  else{
-    v1x = r.second.first;
-    v2x = r.first.first;
-  }
-  if(r.first.second < r.second.second){
-    v1y = r.first.second;
-    v2y = r.second.second;
-  }else {
-    v1y = r.second.second;
-    v2y = r.first.second;
-  }
-  auto px = p.first;
-  auto py = p.second;
-  if ((px > v1x)&& (px < v2x) && (py > v1y) && (py < v2y)){
-    return false;
-  }
-  return true;
+  return lines;
 }
 
-bool is_valid_rect(const Rect& r, const std::vector<Pos>& ps){
-  for(const auto& p: ps){
-    if(inside_rect(p,r)){
+bool inside(Range r1, Range r2){
+  if (r1 < r2) return r1.second > r2.first;
+  else return r2.second > r1.first;
+}
+
+Range new_range(long f, long s) {
+  if (f <= s) return {f, s};
+  else return {s, f};
+  // auto smaller = f <= s ? f : s;
+  // auto larger = f > s ? f : s;
+  // return {smaller,larger};
+}
+
+bool inside_rect(const Rect& l, const Rect& r){
+  // Run with optimization flags and this horribly slow code
+  // gets optimized away
+  Range CDx = new_range(l.first.first, l.second.first);
+  Range CDy = new_range(l.first.second, l.second.second);
+  Range ABx = new_range(r.first.first, r.second.first);
+  Range ABy = new_range(r.first.second, r.second.second);
+  return inside(CDx, ABx) && inside(CDy, ABy);
+}
+
+bool is_valid_rect(const Rect& r, const std::vector<Rect>& lines){
+  for(const auto& l: lines){
+    if(inside_rect(l,r)){
       return false;
     }
   }
   return true;
 }
 
-std::map<Rect, long, RectLess> find_valid_areas(const std::vector<Pos>& vec){
+std::map<Rect, long, RectLess> find_valid_areas(const std::vector<Pos>& vec, const std::vector<Rect>& lines){
   std::map<Rect, long, RectLess> areas;
   for(int i = 0; i < vec.size(); i++){
     for(int j = i+1; j < vec.size(); j++){
       auto fst = vec[i];
       auto snd = vec[j];
       auto r = Rect{fst, snd};
-      if(is_valid_rect(r, vec)){
-	areas.insert({{fst, snd},area(fst,snd)});	
+      if(is_valid_rect(r, lines)){
+	areas.insert({r,area(fst,snd)});
       }
     }
   }
   return areas;
 }
-
 
 
 int main(){
@@ -102,13 +112,11 @@ int main(){
     rs.push_back(parse_range(line));
   }
   auto areas = permute(rs);
-  auto valid_areas = find_valid_areas(rs);
+  auto lines = connect_lines(rs);
+  auto valid_areas = find_valid_areas(rs, lines);
   
   std::cout << "part1: " << areas.rbegin()->second  << std::endl;
-  for(auto v: valid_areas){
-    std::cout << "v2: " << v.second << std::endl;
-  }
-  //std::cout << "part2: " << valid_areas.rbegin()->second  << std::endl;
+  std::cout << "part2: " << valid_areas.rbegin()->second  << std::endl;
   
   return 0;
 }
